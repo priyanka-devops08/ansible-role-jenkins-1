@@ -1,0 +1,10 @@
+---
+- name: Make sure the parameters for the jenkins ansible user has been defined
+  assert:
+    that:
+      - "jenkins_ansible_user is defined"
+
+- name: Make sure the target operating system is supported by this role
+  assert:
+    that:
+      - "ansible_os_family == 'RedHat' or ansible_os_family == 'Debian'"

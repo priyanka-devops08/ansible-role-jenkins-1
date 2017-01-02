@@ -1,0 +1,21 @@
+---
+- name: Install Open-JDK package
+  apt:
+    name: "{{ openjdk_package }}"
+    state: installed
+
+- name: Install key for the Jenkins apt repository
+  apt_key:
+    url: "https://pkg.jenkins.io/debian/jenkins-ci.org.key"
+    state: present
+
+- name: Install access to the Jenkins apt repository
+  apt_repository:
+    repo: deb http://pkg.jenkins.io/debian-stable binary
+    state: present
+    filename: 'jenkins-stable'
+
+- name: Install Jenkins package
+  apt:
+    name: jenkins
+    state: installed

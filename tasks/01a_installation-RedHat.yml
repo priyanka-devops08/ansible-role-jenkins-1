@@ -1,0 +1,18 @@
+---
+- name: Install Open-JDK package
+  yum:
+    name: "{{ openjdk_package }}"
+    state: installed
+
+- name: Install access to the Jenkins yum repository
+  yum_repository:
+    name: jenkins-stable
+    description: Jenkins stable yum repository
+    baseurl: http://pkg.jenkins.io/redhat-stable
+    gpgkey: https://jenkins-ci.org/redhat/jenkins-ci.org.key
+    gpgcheck: yes
+
+- name: Install Jenkins package
+  yum:
+    name: jenkins
+    state: installed
