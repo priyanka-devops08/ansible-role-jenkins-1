@@ -1,0 +1,7 @@
+---
+- include: 00_assertions.yml
+  tags: ['jenkins','installation','configuration','jenkins-installation','jenkins-configuration']
+- include: 01_installation.yml
+  tags: ['jenkins','installation','jenkins-installation']
+- include: 02_configuration.yml
+  tags: ['jenkins','configuration','jenkins-configuration']

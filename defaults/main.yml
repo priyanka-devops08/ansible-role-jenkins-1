@@ -1,0 +1,51 @@
+---
+# Jenkins data directory (determined by distribution package)
+jenkins_datadir: "/var/lib/jenkins"
+
+# Address on which Jenkins should listen (eg: "192.168.1.1" or "0.0.0.0")
+jenkins_service_listen_addr: "0.0.0.0"
+
+# Port on which Jenkins should listen for plain HTTP
+jenkins_service_listen_port: "8080"
+
+# Address to use when connecting to Jenins service from the local server
+jenkins_service_connect_host: "127.0.0.1"
+
+# Number of Jenkins executors
+jenkins_executors: 2
+
+# List of Jenkins plugins to install
+jenkins_plugins_base: ['job-dsl', 'git', 'matrix-auth']
+jenkins_plugins_extra: ['ansicolor', 'greenballs', 'copyartifact', 'envinject']
+jenkins_plugins: '{{ jenkins_plugins_base + jenkins_plugins_extra }}'
+
+# Enable or disable creation of the Jenkins-DSL job
+jenkins_dsl_enabled: true
+
+# Path to the DSL groovy files in the repository
+jenkins_dsl_source_files: '{{ role_path }}/templates/dsl'
+
+# Example of an ansible variable used in Jenkins-DSL code
+jenkins_dsl_dummy_variable: 'dummy-var'
+
+# Jenkins admin user required by Ansible (define your own following example)
+#jenkins_ansible_user:
+#  username: "ansibleUserName"
+#  password: "ansiblePassWord"
+#  userperm: "hudson.model.Hudson.Administer"
+
+# List of additional jenkins user to create (define your own following example)
+jenkins_users: []
+jenkins_users_example:
+  - username: "admin1"
+    password: "password1"
+    userperm: "hudson.model.Hudson.Administer"
+    sshpubkey: ""
+  - username: "admin2"
+    password: "password2"
+    userperm: "hudson.model.Hudson.Administer"
+    sshpubkey: ""
+  - username: "user3"
+    password: "password3"
+    userperm: "hudson.model.Hudson.Read"
+    sshpubkey: ""

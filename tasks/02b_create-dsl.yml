@@ -1,0 +1,35 @@
+---
+- name: Check if the Jenkins DSL job already exists
+  stat:
+    path: /var/lib/jenkins/jobs/JENKINS_DSL/config.xml
+  register: dslconfig
+
+- name: Create Jenkins DSL job using the Jenkins API
+  uri:
+    url: "http://{{ jenkins_service_connect_host }}:{{ jenkins_service_listen_port }}/createItem?name=JENKINS_DSL"
+    method: POST
+    follow_redirects: all
+    body: "{{ lookup('template','config-job-dsl.xml.j2') }}"
+    HEADER_Content-Type: "text/xml"
+    force_basic_auth: true
+    user: "{{ jenkins_ansible_user.username }}"
+    password: "{{ jenkins_ansible_user.password }}"
+  when: dslconfig.stat.exists == False
+
+- name: Create workspace for the Jenkins DSL job
+  file:
+    path: "{{ jenkins_datadir }}/jobs/JENKINS_DSL/jobs-dsl/"
+    state: directory
+    owner: jenkins
+    group: jenkins
+    mode: 0755
+
+- name: Copy Jenkins DSL configuration files
+  template:
+    src: "{{ item }}"
+    dest: "{{ jenkins_datadir }}/jobs/JENKINS_DSL/jobs-dsl/{{ item | basename | replace('.j2','') }}"
+    owner: jenkins
+    group: jenkins
+    mode: 0644
+  with_fileglob:
+    - "{{ jenkins_dsl_source_files }}/*.groovy.j2"

@@ -1,0 +1,5 @@
+job("Job-dummy") {
+    steps {
+        shell('echo "The dummy variable is {{ jenkins_dsl_dummy_variable }}"')
+    }
+}

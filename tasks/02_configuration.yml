@@ -1,0 +1,111 @@
+---
+- set_fact:
+    jenkins_users_all: '{{ [jenkins_ansible_user] + jenkins_users }}'
+
+- include: 02a_create-user.yml username="{{ item.username }}" password="{{ item.password }}" sshpubkey="{{ item.sshpubkey|default('') }}"
+  with_items: "{{ jenkins_users_all }}"
+
+- name: Make sure the Jenkins service is enabled and running
+  service:
+    name: jenkins
+    enabled: true
+    state: started
+  register: doservice
+
+- name: Wait until the Jenkins service is ready
+  wait_for:
+    host: "{{ inventory_hostname }}"
+    port: "{{ jenkins_service_listen_port }}"
+    delay: 10
+    timeout: 120
+  when: doservice.changed
+
+#- name: Download jenkins-cli.jar
+#  get_url:
+#    url: "http://{{ jenkins_service_connect_host }}:{{ jenkins_service_listen_port }}/jnlpJars/jenkins-cli.jar"
+#    dest: "{{ jenkins_datadir }}/jenkins-cli.jar"
+#  become_user: jenkins
+
+- name: Check if all required Jenkins plugins are already installed
+  uri:
+    url: "http://{{ jenkins_service_connect_host }}:{{ jenkins_service_listen_port }}/pluginManager/prevalidateConfig"
+    method: POST
+    follow_redirects: all
+    body: "{{ lookup('template', './api-install-plugins.xml.j2') }}"
+    force_basic_auth: true
+    user: "{{ jenkins_ansible_user.username }}"
+    password: "{{ jenkins_ansible_user.password }}"
+    HEADER_Content-Type: "text/xml"
+  register: pluginchk
+
+- name: Use variable to trigger plugins installation if required
+  set_fact:
+    plugins_doinstall: false
+
+- name: Require plugin installation if at least one plugin is missing
+  set_fact:
+    plugins_doinstall: true
+  with_items: "{{ pluginchk.json }}"
+  when: '"{{ item.mode }}" == "missing"'
+
+- name: Install all required plugins using the Jenkins API if required
+  uri:
+    url: "http://{{ jenkins_service_connect_host }}:{{ jenkins_service_listen_port }}/pluginManager/installNecessaryPlugins"
+    method: POST
+    follow_redirects: all
+    body: "{{ lookup('template', './api-install-plugins.xml.j2') }}"
+    HEADER_Content-Type: "text/xml"
+    force_basic_auth: true
+    user: "{{ jenkins_ansible_user.username }}"
+    password: "{{ jenkins_ansible_user.password }}"
+  when: plugins_doinstall == True
+
+- name: Wait until the plugins installation has finished
+  uri:
+    url: "http://{{ jenkins_service_connect_host }}:{{ jenkins_service_listen_port }}/updateCenter/api/json?pretty&tree=jobs[id,type,status[type]]"
+    force_basic_auth: true
+    user: "{{ jenkins_ansible_user.username }}"
+    password: "{{ jenkins_ansible_user.password }}"
+  register: operstate
+  until: '"Pending" not in "{{ operstate.json.jobs }}"'
+  delay: 5
+  retries: 30
+  when: plugins_doinstall == True
+
+- name: Let Jenkins settle down
+  pause:
+    seconds: 10
+  when: plugins_doinstall == True
+
+- name: Create or update main Jenkins configuration file
+  template:
+    src: "config-main.xml.j2"
+    dest: "{{ jenkins_datadir }}/config.xml"
+    owner: jenkins
+    group: jenkins
+    mode: 0644
+    backup: true
+  register: setconfig1
+
+- name: Restart Jenkins service if required
+  service:
+    name: jenkins
+    state: restarted
+  register: doservice
+  when: plugins_doinstall or setconfig1.changed
+
+- name: Wait until the Jenkins service is ready
+  wait_for:
+    host: "{{ inventory_hostname }}"
+    port: "{{ jenkins_service_listen_port }}"
+    delay: 10
+    timeout: 120
+  when: plugins_doinstall or setconfig1.changed
+
+#- name: Configure Jenkins security
+#  shell: echo '{{ lookup("template", "./groovy-setup-security.j2") }}' | java -jar {{ jenkins_datadir }}/jenkins-cli.jar -s http://{{ jenkins_service_connect_host }}:{{ jenkins_service_listen_port }} groovy =
+#  when: chksecurity.rc != 0
+
+- include: 02b_create-dsl.yml
+  tags: 'jenkins-dsl'
+  when: jenkins_dsl_enabled == true

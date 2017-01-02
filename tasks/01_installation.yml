@@ -1,0 +1,23 @@
+---
+- name: Include OS-specific variables
+  include_vars: "{{ ansible_os_family }}.yml"
+
+- include: "01a_installation-{{ ansible_os_family }}.yml"
+
+- name: Make sure Jenkins listens on the right address
+  lineinfile:
+    dest: '{{ jenkins_optfile }}'
+    regexp: '^JENKINS_LISTEN_ADDRESS='
+    line: 'JENKINS_LISTEN_ADDRESS="{{ jenkins_service_listen_addr }}"'
+
+- name: Make sure Jenkins listens on the right port
+  lineinfile:
+    dest: '{{ jenkins_optfile }}'
+    regexp: '^JENKINS_PORT='
+    line: 'JENKINS_PORT="{{ jenkins_service_listen_port }}"'
+
+- name: Do not run Jenkins setup Wizard
+  lineinfile:
+    dest: '{{ jenkins_optfile }}'
+    regexp: '^JENKINS_JAVA_OPTIONS='
+    line: 'JENKINS_JAVA_OPTIONS="-Djava.awt.headless=true -Djenkins.install.runSetupWizard=false"'
